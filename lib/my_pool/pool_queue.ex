@@ -1,28 +1,34 @@
 defmodule MyPool.PoolQueue do
   use GenServer
 
-  def start_link([]) do
-    GenServer.start_link(__MODULE__, [], name: PoolQueue)
+  def start_link(worker: {mod, fun, args}, n_workers: n, name: name) do
+    GenServer.start_link(__MODULE__, [{mod, fun, args}, n], name: name)
   end
 
-  def get(), do: GenServer.call(PoolQueue, :get)
+  def get(name), do: GenServer.call(name, :get)
 
-  def get_pid(), do: GenServer.call(PoolQueue, :get_pid)
+  def get_pid(name), do: GenServer.call(name, :get_pid)
 
-  def add_pid() do
-    {:ok, pid} = :erlang.apply(MyPool.Worker, :start_link, [[]])
-    GenServer.cast(PoolQueue, {:in, pid})
-  end
+  #def add_pid() do
+  #  {:ok, pid} = :erlang.apply(MyPool.Worker, :start_link, [[]])
+  #  GenServer.cast(PoolQueue, {:in, pid})
+  #end
 
-  def exec_sum(a, b) do
-    {:ok, pid} = GenServer.call(PoolQueue, :get_pid)
-    GenServer.call(pid, {:sum, a, b})
+  def exec(name, a, b) do
+    {:ok, pid} = GenServer.call(name, :get_pid)
+    GenServer.call(pid, {:operation, a, b})
   end
 
   @impl true
-  def init([]) do
+  def init([{mod, fun, args}, n]) do
+    queue = 1..n
+    |> Enum.to_list()
+    |> Enum.map(fn _n ->
+      {:ok, pid} = :erlang.apply(mod, fun, [args])
+      pid
+    end)
     # our queue when our process start is always empty it means an empty list
-    {:ok, []}
+    {:ok, queue}
   end
 
   @impl true
