@@ -9,7 +9,10 @@ defmodule MyPool.PoolQueue do
 
   def get_pid(), do: GenServer.call(PoolQueue, :get_pid)
 
-  def add_pid(pid), do: GenServer.cast(PoolQueue, {:in, pid})
+  def add_pid(worker_mod) do
+    {:ok, pid} = :erlang.apply(worker_mod, :start_link, [[]])
+    GenServer.cast(PoolQueue, {:in, pid})
+  end
 
   def exec_sum(a, b) do
     {:ok, pid} = GenServer.call(PoolQueue, :get_pid)
