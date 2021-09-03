@@ -9,7 +9,7 @@ defmodule MyPool.Application do
   def start(_type, _args) do
     children = [
       # Starts a worker by calling: MyPool.Worker.start_link(arg)
-      # {MyPool.Worker, arg}
+      {MyPool.PoolQueue, []}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
