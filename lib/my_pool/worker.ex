@@ -11,6 +11,6 @@ defmodule MyPool.Worker do
   @impl true
   def handle_call({:sum, a, b}, _from, state) do
      IO.inspect "SUM VALUES #{a}, #{b} WAS PROCESSED BY #{inspect self()}"
-    {:reply, {:ok, a + b}, state}
+    {:reply, {:ok, a + b}, [a+b]}
   end
 end
