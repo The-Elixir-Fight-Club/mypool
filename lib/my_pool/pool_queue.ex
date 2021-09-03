@@ -5,6 +5,12 @@ defmodule MyPool.PoolQueue do
     GenServer.start_link(__MODULE__, [], name: PoolQueue)
   end
 
+  def get(), do: GenServer.call(PoolQueue, :get)
+
+  def get_pid(), do: GenServer.call(PoolQueue, :get_pid)
+
+  def add_pid(pid), do: GenServer.cast(PoolQueue, {:in_pid, pid})
+
   @impl true
   def init([]) do
     # our queue when our process start is always empty it means an empty list
