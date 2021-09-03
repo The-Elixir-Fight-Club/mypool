@@ -9,7 +9,12 @@ defmodule MyPool.PoolQueue do
 
   def get_pid(), do: GenServer.call(PoolQueue, :get_pid)
 
-  def add_pid(pid), do: GenServer.cast(PoolQueue, {:in_pid, pid})
+  def add_pid(pid), do: GenServer.cast(PoolQueue, {:in, pid})
+
+  def exec_sum(a, b) do
+    {:ok, pid} = GenServer.call(PoolQueue, :get_pid)
+    GenServer.call(pid, {:sum, a, b})
+  end
 
   @impl true
   def init([]) do
