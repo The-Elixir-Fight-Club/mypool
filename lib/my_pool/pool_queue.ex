@@ -1,6 +1,8 @@
 defmodule MyPool.PoolQueue do
   use GenServer
 
+  require Logger
+
   def start_link(worker: {mod, fun, args}, n_workers: n, name: name) do
     GenServer.start_link(__MODULE__, [{mod, fun, args}, n], name: name)
   end
@@ -51,16 +53,17 @@ defmodule MyPool.PoolQueue do
         {:DOWN, _ref, :process, pid, _reason},
     %{queue: queue, worker: {mod, fun, args}} = state
       ) do
-    IO.inspect("DOWN FOR PID #{inspect(pid)}")
 
     Enum.find(queue, fn %{pid: n_pid} -> n_pid == pid end)
     |> case do
       nil ->
-        IO.inspect("pid #{inspect(pid)} was not found in queue")
+        Logger.warn "pid #{inspect pid} was not foun in queue, ignoring ..."
 
         {:noreply, state}
 
       %{pid: _pid, ref: _ref} = elem ->
+        Logger.info "pid #{inspect pid} was DOWN, replacing in queue for another instance"
+
         {:ok, new_pid} = :erlang.apply(mod, fun, [args])
 
         ref = :erlang.monitor(:process, new_pid)
