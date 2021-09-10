@@ -28,31 +28,49 @@ defmodule MyPool.PoolQueue do
 
         %{pid: pid, ref: ref}
       end)
+
+    {:ok, %{queue: queue, worker: {mod, fun, args}}}
   end
 
   @impl true
-  def handle_call(:get, _from, queue), do: {:reply, {:ok, queue}, queue}
+  def handle_call(:get, _from, %{queue: queue} = state), do: {:reply, {:ok, queue}, state}
 
   @impl true
-  def handle_call(:get_pid, _from, [%{pid: pid} = pid_ref | queue]),
-    do: {:reply, {:ok, pid}, queue ++ [pid_ref]}
+  def handle_call(:get_pid, _from, %{queue: [%{pid: pid} = pid_ref | queue], worker: worker}),
+    do: {:reply, {:ok, pid}, %{queue: queue ++ [pid_ref], worker: worker}}
 
   @impl true
-  def handle_cast({:in, pid}, queue) do
+  def handle_cast({:in, pid}, %{queue: queue, worker: worker}) do
     ref = :erlang.monitor(:process, pid)
 
-    {:noreply, queue ++ [%{pid: pid, ref: ref}]}
+    {:noreply, %{queue: queue ++ [%{pid: pid, ref: ref}], worker: worker}}
   end
 
   @impl true
-  def handle_info({:DOWN, ref, :process, pid, _reason}, queue) do
+  def handle_info(
+        {:DOWN, _ref, :process, pid, _reason},
+    %{queue: queue, worker: {mod, fun, args}} = state
+      ) do
+    IO.inspect("DOWN FOR PID #{inspect(pid)}")
+
     Enum.find(queue, fn %{pid: n_pid} -> n_pid == pid end)
     |> case do
       nil ->
-        IO.inspect("not found pid")
+        IO.inspect("pid #{inspect(pid)} was not found in queue")
 
-      %{pid: pid, ref: ref} ->
-        nil
+        {:noreply, state}
+
+      %{pid: _pid, ref: _ref} = elem ->
+        {:ok, new_pid} = :erlang.apply(mod, fun, [args])
+
+        ref = :erlang.monitor(:process, new_pid)
+
+        queue = queue
+        |> Kernel.--([elem])
+        |> Kernel.++([%{pid: new_pid, ref: ref}])
+
+        {:noreply, %{queue: queue, worker: {mod, fun, args}}}
     end
   end
+  def handle_info({:EXIT, _pid, _reason}, state), do: {:noreply, state}
 end
