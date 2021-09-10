@@ -16,6 +16,8 @@ defmodule MyPool.PoolQueue do
 
   @impl true
   def init([{mod, fun, args}, n]) do
+    Process.flag(:trap_exit, true)
+
     queue =
       1..n
       |> Enum.to_list()
