@@ -9,8 +9,8 @@ defmodule MyPool.Worker.Sub do
   end
 
   @impl true
-  def handle_call({:operation, a, b}, _from, state) do
-     IO.inspect "SUB VALUES #{a}, #{b} WAS PROCESSED BY #{inspect self()}"
-    {:reply, {:ok, a - b}, [a-b]}
+  def handle_call({:operation, a, b}, _from, _state) do
+    IO.inspect("SUB VALUES #{a}, #{b} WAS PROCESSED BY #{inspect(self())}")
+    {:reply, {:ok, a - b}, [a - b]}
   end
 end
