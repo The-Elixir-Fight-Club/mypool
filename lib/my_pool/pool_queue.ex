@@ -49,31 +49,50 @@ defmodule MyPool.PoolQueue do
   end
 
   @impl true
+  def handle_cast({:join, node}, %{queue: queue, worker: worker}) do
+    pid = Node.spawn(node, MyPool.Worker.Sum, :start_link, [[]])
+    # ref = :erlang.monitor(:process, pid)
+    ref = nil
+    IO.inspect(pid)
+    {:noreply, %{queue: queue ++ [%{pid: pid, ref: ref}], worker: worker}}
+  end
+
+  @impl true
   def handle_info(
         {:DOWN, _ref, :process, pid, _reason},
-    %{queue: queue, worker: {mod, fun, args}} = state
+        %{queue: queue, worker: {mod, fun, args}} = state
       ) do
+    IO.inspect(binding())
 
     Enum.find(queue, fn %{pid: n_pid} -> n_pid == pid end)
     |> case do
       nil ->
-        Logger.warn "pid #{inspect pid} was not foun in queue, ignoring ..."
+        Logger.warn("pid #{inspect(pid)} was not foun in queue, ignoring ...")
 
         {:noreply, state}
 
       %{pid: _pid, ref: _ref} = elem ->
-        Logger.info "pid #{inspect pid} was DOWN, replacing in queue for another instance"
+        Logger.info("pid #{inspect(pid)} was DOWN, replacing in queue for another instance")
 
         {:ok, new_pid} = :erlang.apply(mod, fun, [args])
 
         ref = :erlang.monitor(:process, new_pid)
 
-        queue = queue
-        |> Kernel.--([elem])
-        |> Kernel.++([%{pid: new_pid, ref: ref}])
+        queue =
+          queue
+          |> Kernel.--([elem])
+          |> Kernel.++([%{pid: new_pid, ref: ref}])
 
         {:noreply, %{queue: queue, worker: {mod, fun, args}}}
     end
   end
+
   def handle_info({:EXIT, _pid, _reason}, state), do: {:noreply, state}
+
+  def handle_info(_msg, state) do
+    IO.puts("----------------------------------------------------")
+    IO.inspect(binding())
+    IO.puts("----------------------------------------------------")
+    {:noreply, state}
+  end
 end
