@@ -16,6 +16,14 @@ defmodule MyPool.PoolQueue do
     GenServer.call(pid, {:operation, a, b})
   end
 
+  def add_remote_pid(name, node, n) do
+    1..n
+    |> Enum.to_list()
+    |> Enum.each(fn _n ->
+      GenServer.cast(name, {:add_remote, node})
+    end)
+  end
+
   @impl true
   def init([{mod, fun, args}, n]) do
     Process.flag(:trap_exit, true)
@@ -42,7 +50,18 @@ defmodule MyPool.PoolQueue do
     do: {:reply, {:ok, pid}, %{queue: queue ++ [pid_ref], worker: worker}}
 
   @impl true
-  def handle_cast({:in, pid}, %{queue: queue, worker: worker}) do
+  def handle_cast({:add, pid}, %{queue: queue, worker: worker}) do
+    ref = :erlang.monitor(:process, pid)
+
+    {:noreply, %{queue: queue ++ [%{pid: pid, ref: ref}], worker: worker}}
+  end
+
+  @impl true
+  def handle_cast({:add_remote, node}, %{queue: queue, worker: {mod, fun, args} = worker}) do
+    Logger.info "setting up process into remote node #{inspect node}"
+
+    {:ok, pid} = :rpc.call(node, mod, fun, [args])
+
     ref = :erlang.monitor(:process, pid)
 
     {:noreply, %{queue: queue ++ [%{pid: pid, ref: ref}], worker: worker}}
@@ -75,5 +94,6 @@ defmodule MyPool.PoolQueue do
         {:noreply, %{queue: queue, worker: {mod, fun, args}}}
     end
   end
+
   def handle_info({:EXIT, _pid, _reason}, state), do: {:noreply, state}
 end
