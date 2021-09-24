@@ -1,6 +1,8 @@
 defmodule MyPool.Worker.Sub do
   use GenServer
 
+  require Logger
+
   def start_link([]), do: GenServer.start_link(__MODULE__, [])
 
   @impl true
@@ -10,7 +12,7 @@ defmodule MyPool.Worker.Sub do
 
   @impl true
   def handle_call({:operation, a, b}, _from, _state) do
-    IO.inspect("SUB VALUES #{a}, #{b} WAS PROCESSED BY #{inspect(self())}")
+    Logger.info("SUB VALUES #{a}, #{b} WAS PROCESSED BY #{inspect(self())}")
     {:reply, {:ok, a - b}, [a - b]}
   end
 end
