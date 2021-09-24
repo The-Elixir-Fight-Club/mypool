@@ -8,7 +8,9 @@ defmodule MyPool.Application do
   @impl true
   def start(_type, _args) do
     children = [
-      # Starts a worker by calling: MyPool.Worker.start_link(arg)
+      # Starts the node queue monitor
+      {MyPool.NodeQueue, [name: NodeQueue]},
+
       Supervisor.child_spec({MyPool.PoolQueue,
         [worker: {MyPool.Worker.Sum, :start_link, []}, n_workers: 3, name: PoolSum]}, id: :worker_sum),
       Supervisor.child_spec({MyPool.PoolQueue,
